@@ -1,5 +1,6 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
 import os
 import json
@@ -24,16 +25,7 @@ if not api_key:
     st.sidebar.warning("Silakan masukkan Gemini API Key Anda untuk mulai menggunakan aplikasi.")
     st.stop()
 
-# Initialize Gemini
-genai.configure(api_key=api_key)
 
-generation_config = {
-  "temperature": 0.1,
-  "top_p": 1,
-  "top_k": 32,
-  "max_output_tokens": 4096,
-  "response_mime_type": "application/json",
-}
 
 # The prompt instructions
 SYSTEM_PROMPT = """
@@ -90,13 +82,19 @@ Keluarkan analisis Anda murni dalam bentuk JSON dengan skema berikut:
 }
 """
 
-def analyze_document(image):
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        generation_config=generation_config,
+def analyze_document(image, api_key):
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model="gemini-1.5-flash-latest",
+        contents=[SYSTEM_PROMPT, image],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.1,
+            top_p=1.0,
+            top_k=32,
+            max_output_tokens=4096
+        )
     )
-    # Using JSON format helps us parse it consistently
-    response = model.generate_content([SYSTEM_PROMPT, image])
     return response.text
 
 # --- Main Area ---
@@ -110,13 +108,13 @@ if uploaded_file is not None:
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
-        st.image(image, caption="Dokumen yang diunggah", use_column_width=True)
+        st.image(image, caption="Dokumen yang diunggah", use_container_width=True)
     
     with col2:
         if st.button("🔍 Mulai Audit Forensik", type="primary", use_container_width=True):
             with st.spinner("Menganalisis dokumen pada tingkat piksel dan semantik..."):
                 try:
-                    result_json = analyze_document(image)
+                    result_json = analyze_document(image, api_key)
                     
                     try:
                         data = json.loads(result_json)
