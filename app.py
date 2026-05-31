@@ -8,24 +8,17 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-st.set_page_config(page_title="VeriIjazah AI", page_icon="🎓", layout="wide")
+st.set_page_config(page_title="VerIjazah-AI", page_icon="🎓", layout="wide")
 
-st.title("🎓 VeriIjazah AI")
+st.title("🎓 VerIjazah-AI")
 st.markdown("""
 **Solusi Pertahanan Pertama (First-line of Defense) Verifikasi Dokumen Akademik**
 
-Aplikasi ini menggunakan teknologi AI tingkat lanjut (Gemini 1.5 Flash) untuk melakukan dekonstruksi elemen visual, uji konsistensi logika, dan mendeteksi anomali (bekas editan) pada ijazah.
+Aplikasi ini menggunakan teknologi AI tingkat lanjut (Gemini 3.5 Flash) untuk melakukan dekonstruksi elemen visual, uji konsistensi logika, dan mendeteksi anomali (bekas editan) pada ijazah.
 """)
 
-# --- Sidebar Configuration ---
-st.sidebar.header("⚙️ Konfigurasi")
-api_key = st.sidebar.text_input("Gemini API Key", value=os.environ.get("GEMINI_API_KEY", ""), type="password")
-if not api_key:
-    st.sidebar.warning("Silakan masukkan Gemini API Key Anda untuk mulai menggunakan aplikasi.")
-    st.stop()
-
 # Initialize Gemini
-genai.configure(api_key=api_key)
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
 generation_config = {
   "temperature": 0.1,
@@ -92,7 +85,7 @@ Keluarkan analisis Anda murni dalam bentuk JSON dengan skema berikut:
 
 def analyze_document(image):
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-3.5-flash",
         generation_config=generation_config,
     )
     # Using JSON format helps us parse it consistently
@@ -110,7 +103,7 @@ if uploaded_file is not None:
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
-        st.image(image, caption="Dokumen yang diunggah", use_column_width=True)
+        st.image(image, caption="Dokumen yang diunggah", use_container_width=True)
     
     with col2:
         if st.button("🔍 Mulai Audit Forensik", type="primary", use_container_width=True):
