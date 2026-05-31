@@ -1,6 +1,5 @@
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 from PIL import Image
 import os
 import json
@@ -9,23 +8,25 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-st.set_page_config(page_title="VeriIjazah AI", page_icon="🎓", layout="wide")
+st.set_page_config(page_title="VerIjazah-AI", page_icon="🎓", layout="wide")
 
-st.title("🎓 VeriIjazah AI")
+st.title("🎓 VerIjazah-AI")
 st.markdown("""
 **Solusi Pertahanan Pertama (First-line of Defense) Verifikasi Dokumen Akademik**
 
-Aplikasi ini menggunakan teknologi AI tingkat lanjut (Gemini 1.5 Flash) untuk melakukan dekonstruksi elemen visual, uji konsistensi logika, dan mendeteksi anomali (bekas editan) pada ijazah.
+Aplikasi ini menggunakan teknologi AI tingkat lanjut (Gemini 3.5 Flash) untuk melakukan dekonstruksi elemen visual, uji konsistensi logika, dan mendeteksi anomali (bekas editan) pada ijazah.
 """)
 
-# --- Sidebar Configuration ---
-st.sidebar.header("⚙️ Konfigurasi")
-api_key = st.sidebar.text_input("Gemini API Key", value=os.environ.get("GEMINI_API_KEY", ""), type="password")
-if not api_key:
-    st.sidebar.warning("Silakan masukkan Gemini API Key Anda untuk mulai menggunakan aplikasi.")
-    st.stop()
+# Initialize Gemini
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
-
+generation_config = {
+  "temperature": 0.1,
+  "top_p": 1,
+  "top_k": 32,
+  "max_output_tokens": 4096,
+  "response_mime_type": "application/json",
+}
 
 # The prompt instructions
 SYSTEM_PROMPT = """
@@ -82,19 +83,13 @@ Keluarkan analisis Anda murni dalam bentuk JSON dengan skema berikut:
 }
 """
 
-def analyze_document(image, api_key):
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model="gemini-1.5-flash-latest",
-        contents=[SYSTEM_PROMPT, image],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.1,
-            top_p=1.0,
-            top_k=32,
-            max_output_tokens=4096
-        )
+def analyze_document(image):
+    model = genai.GenerativeModel(
+        model_name="gemini-3.5-flash",
+        generation_config=generation_config,
     )
+    # Using JSON format helps us parse it consistently
+    response = model.generate_content([SYSTEM_PROMPT, image])
     return response.text
 
 # --- Main Area ---
@@ -114,7 +109,7 @@ if uploaded_file is not None:
         if st.button("🔍 Mulai Audit Forensik", type="primary", use_container_width=True):
             with st.spinner("Menganalisis dokumen pada tingkat piksel dan semantik..."):
                 try:
-                    result_json = analyze_document(image, api_key)
+                    result_json = analyze_document(image)
                     
                     try:
                         data = json.loads(result_json)
